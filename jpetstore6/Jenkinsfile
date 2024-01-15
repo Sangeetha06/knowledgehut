@@ -2,29 +2,36 @@ pipeline {
     agent any
 
     stages {
-        stage('Hello') {
+        stage('Git download') {
             steps {
-                echo 'Hello World'
+               git branch: 'main', url: 'https://github.com/Sangeetha06/knowledgehut.git'
             }
         }
-    
         stage('Build') {
             steps {
-                echo 'Building stage'
+             sh '''cd jpetstore6
+                    ./mvnw clean package -Dlicense.skip=true'''
             }
         }
-    
-        stage('Deploy') {
-            steps {
-                echo 'Deployment stage'
-            }
-        }
-    
         stage('Test') {
             steps {
-                echo 'Testing stage'
+                junit 'jpetstore6/target/surefire-reports/*xml'
             }
         }
-    } 
-        
+         stage('Prepare environment') {
+            steps {
+               sh '''wget  https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.83/bin/apache-tomcat-9.0.83.tar.gz
+                mkdir -p /tmp/apache-tomcat
+                chmod 777 /tmp/apache-tomcat
+                tar -xvf apache-tomcat*.tar.gz -C /tmp/apache-tomcat --strip-components=1
+                sed -i \'s/8080/9090/g\'  /tmp/apache-tomcat/conf/server.xml
+                /tmp/apache-tomcat/bin/catalina.sh start'''
+            }
+        }
+          stage('Deploy') {
+           steps {
+               sh '''cp jpetstore6/target/jpetstore.war /tmp/apache-tomcat/webapps/'''
+           }
+       }
+    }
 }
